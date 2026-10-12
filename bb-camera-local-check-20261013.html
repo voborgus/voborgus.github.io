@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local camera check</title>
+  <style>
+    body { max-width: 40rem; margin: 2rem auto; padding: 0 1rem; font: 18px/1.5 system-ui, sans-serif; }
+    button { font: inherit; padding: .7rem 1rem; margin: .4rem .4rem .4rem 0; }
+    video { width: 100%; max-height: 60vh; background: #111; margin-top: 1rem; }
+    #status { white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <h1>Local camera check</h1>
+  <p id="marker">BB_CAMERA_LOCAL_ONLY_20261013</p>
+  <p>Эта страница запрашивает только видео. Кадры остаются в браузере: здесь нет загрузки, записи или сторонних ресурсов.</p>
+  <p>Origin: <strong id="origin"></strong></p>
+  <button id="start" type="button">Запросить камеру</button>
+  <button id="stop" type="button">Остановить</button>
+  <p id="status" role="status">Ожидает нажатия.</p>
+  <video id="preview" autoplay muted playsinline></video>
+  <script>
+    'use strict';
+    const origin = location.origin;
+    const video = document.getElementById('preview');
+    const status = document.getElementById('status');
+    document.getElementById('origin').textContent = origin;
+    let stream = null;
+
+    function stop() {
+      if (stream) {
+        for (const track of stream.getTracks()) track.stop();
+        stream = null;
+      }
+      video.srcObject = null;
+      status.textContent = 'CAMERA_STOPPED origin=' + origin;
+    }
+
+    document.getElementById('stop').addEventListener('click', stop);
+    document.getElementById('start').addEventListener('click', async () => {
+      stop();
+      status.textContent = 'CAMERA_REQUESTING origin=' + origin;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+        const live = stream.getVideoTracks().some(track => track.readyState === 'live');
+        status.textContent = (live ? 'CAMERA_AVAILABLE live' : 'CAMERA_NO_LIVE_TRACK') + ' origin=' + origin;
+      } catch (error) {
+        status.textContent = 'CAMERA_ERROR ' + error.name + ': ' + error.message + ' origin=' + origin;
+      }
+    });
+    window.addEventListener('pagehide', stop);
+  </script>
+</body>
+</html>
